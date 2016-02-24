@@ -23,6 +23,7 @@ repositories {
 dependencies {
     compile 'com.beust:jcommander:1.48'
     compile 'com.google.guava:guava:19.0'
+    compile 'commons-io:commons-io:2.4'
     testCompile 'junit:junit:4.12'
     testCompile 'org.hamcrest:hamcrest-all:1.3'
 

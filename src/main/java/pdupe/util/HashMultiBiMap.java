@@ -2,9 +2,11 @@ package pdupe.util;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -81,6 +83,19 @@ public final class HashMultiBiMap<K, V> implements MultiBiMap<K, V> {
     public Set<V> uniqueValues() {
         final Set<V> ret = new HashSet<>();
         ret.addAll(this.forward.values());
+        return ret;
+    }
+
+    @Override
+    public Collection<K> getKeys(Collection<V> values) {
+        final List<K> ret = new ArrayList<>();
+        for (V v : values) {
+            final Collection<K> keys = this.reverse.get(v);
+            if (keys == null || keys.isEmpty()) {
+                throw new IllegalArgumentException("No value for " + v);
+            }
+            ret.addAll(keys);
+        }
         return ret;
     }
 

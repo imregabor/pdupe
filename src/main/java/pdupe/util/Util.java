@@ -1,9 +1,11 @@
 package pdupe.util;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -102,6 +104,17 @@ public final class Util {
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    public static Optional<File> nonExistenFileFromNullable(String location) {
+        if (location == null) {
+            return Optional.<File>absent();
+        }
+        final File ret = new File(location);
+        if (ret.exists()) {
+            throw new IllegalArgumentException("Already exists " + ret);
+        }
+        return Optional.of(ret);
     }
 
 }

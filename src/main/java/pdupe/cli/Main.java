@@ -3,12 +3,16 @@
 package pdupe.cli;
 
 import com.beust.jcommander.JCommander;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Set;
+import org.apache.commons.io.FileUtils;
 import pdupe.model.Model;
 import pdupe.model.TraverseWatcher;
 import pdupe.model.VerbosingWatcher;
@@ -93,9 +97,35 @@ public class Main {
                 tm = (Model) ois.readObject();
             }
             System.err.println("   Done. Size: " + tm.size());
-            System.err.println("Start compare");
-            tm.matchingFiles(qm);
 
+
+            final Collection<Long> qids;
+            final Collection<Long> tids;
+            switch (commandFind.mm) {
+                case NAME:
+                    final Set<String> names = tm.matchingNames(qm);
+                    qids = qm.idsFromNames(names);
+                    tids = tm.idsFromNames(names);
+                    break;
+                case SIZE:
+                    final Set<Long> sizes = tm.matchingSizes(qm);
+                    qids = qm.idsFromSizes(sizes);
+                    tids = tm.idsFromSizes(sizes);
+                    break;
+                default:
+                    throw new AssertionError();
+            }
+
+            final Optional<File> oqf = Util.nonExistenFileFromNullable(commandFind.oq);
+            final Optional<File> otf = Util.nonExistenFileFromNullable(commandFind.ot);
+            if (oqf.isPresent()) {
+                FileUtils.writeLines(oqf.get(), "UTF-8", qm.pathesFromIds(qids));
+            }
+            if (otf.isPresent()) {
+                FileUtils.writeLines(otf.get(), "UTF-8", tm.pathesFromIds(tids));
+            }
+
+            System.err.println("All done.");
         } else {
             throw new IllegalArgumentException("No command specified");
         }

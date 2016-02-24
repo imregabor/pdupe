@@ -11,10 +11,23 @@ import com.beust.jcommander.Parameters;
 @Parameters(commandDescription = "Add files/directories to the blob")
 public class FindDupeCandidatesParameters {
 
-    @Parameter(names = "-q", required = true, description = "Query blob.")
+    enum MatchMode {
+        SIZE, NAME
+    }
+
+    @Parameter(names = "-q", required = true, description = "Query binary blob to read.")
     String q;
 
-    @Parameter(names = "-t", required = true, description = "Target blob.")
+    @Parameter(names = "-t", required = true, description = "Target binary blob to read.")
     String t;
+
+    @Parameter(names = "-m", description = "Match mode (use SIZE or NAME).")
+    MatchMode mm = MatchMode.SIZE;
+
+    @Parameter(names = "-oq", description = "Text file to write selected query files.")
+    String oq;
+
+    @Parameter(names = "-ot", description = "Text file to write selected target files.")
+    String ot;
 
 }

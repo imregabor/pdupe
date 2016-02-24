@@ -39,6 +39,14 @@ public interface MultiBiMap<K, V> extends Serializable {
     Collection<K> getKeys(V value);
 
     /**
+     * Get keys for multiple values.
+     *
+     * @param values Values to query
+     * @return Keys for specified values
+     */
+    Collection<K> getKeys(Collection<V> values);
+
+    /**
      * Check for a presence of a key.
      *
      * @param key Key to check

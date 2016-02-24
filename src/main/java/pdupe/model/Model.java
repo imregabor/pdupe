@@ -6,8 +6,9 @@ import com.google.common.collect.HashBiMap;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.List;
+import java.util.Collection;
 import java.util.Set;
+import pdupe.util.BiMaps;
 import pdupe.util.HashMultiBiMap;
 import pdupe.util.MultiBiMap;
 
@@ -53,29 +54,83 @@ public class Model implements Serializable {
 
     }
 
-    public List<Long> matchingFiles(Model query) {
-        System.err.println("Collect my sizes");
-        final Set<Long> sizes = this.idToSize.uniqueValues();
-        System.err.println("  Distinct values: " + sizes.size());
-        System.err.println("Collect query sizes");
-        final Set<Long> querySizes = query.idToSize.uniqueValues();
-        System.err.println("  Distinct values: " + querySizes.size());
-        System.err.println("Compute intersection");
-        sizes.retainAll(querySizes);
-        System.err.println("Intersection size: " + sizes.size());
+    /**
+     * Sizes occurring in both sets.
+     *
+     * @param other Other set
+     * @return File sizes occurring in both sets
+     */
+    public Set<Long> matchingSizes(Model other) {
+        System.err.println("matchingSizes(...)");
 
-        System.err.println();
-        System.err.println("Collect my names");
-        final Set<String> names = this.idToName.uniqueValues();
-        System.err.println("  Distinct values: " + names.size());
-        System.err.println("Collect query names");
-        final Set<String> queryNames = query.idToName.uniqueValues();
-        System.err.println("  Distinct values: " + queryNames.size());
-        System.err.println("Compute intersection");
-        names.retainAll(queryNames);
-        System.err.println("Intersection size: " + names.size());
+        System.err.print(  "    collection sizes from this            ");
+        final Set<Long> thisSizes = this.idToSize.uniqueValues();
+        System.err.println("done.");
+        System.err.println("        distinct size values: " + thisSizes.size());
 
-        return null;
+        System.err.print(  "    collection sizes from query           ");
+        final Set<Long> otherSizes = other.idToSize.uniqueValues();
+        System.err.println("done.");
+        System.err.println("        distinct size values: " + otherSizes.size());
+
+        System.err.print(  "    compute intersection                  ");
+        thisSizes.retainAll(otherSizes);
+        System.err.println("done.");
+        System.err.println("    All done. Distinct size values: " + thisSizes.size());
+
+        return thisSizes;
+    }
+
+
+    public Collection<Long> idsFromNames(Collection<String> names) {
+        System.err.println("idsFromNames()");
+        System.err.println("    Input size:  " + names.size());
+        final Collection<Long> ret = this.idToName.getKeys(names);
+        System.err.println("    Result size: " + ret.size());
+        return ret;
+    }
+
+    public Collection<Long> idsFromSizes(Collection<Long> sizes) {
+        System.err.println("idsFromSizes()");
+        System.err.println("    Input size:  " + sizes.size());
+        final Collection<Long> ret = this.idToSize.getKeys(sizes);
+        System.err.println("    Result size: " + ret.size());
+        return ret;
+    }
+
+    public Collection<String> pathesFromIds(Collection<Long> ids) {
+        return BiMaps.values(this.idToCanonicalPath, ids);
+    }
+
+    public Set<String> pathesFromNames(Collection<String> names) {
+        return BiMaps.values(this.idToCanonicalPath, this.idToName.getKeys(names));
+    }
+
+    /**
+     * Names occurring in both sets.
+     *
+     * @param other Other set
+     * @return File names occurring in both sets
+     */
+    public Set<String> matchingNames(Model other) {
+        System.err.println("nameMatchIds(...)");
+
+        System.err.print(  "    collection names from this (target)   ");
+        final Set<String> thisNames = this.idToName.uniqueValues();
+        System.err.println("done.");
+        System.err.println("        distinct name values: " + thisNames.size());
+
+        System.err.print(  "    collection names from query           ");
+        final Set<String> otherNames = other.idToName.uniqueValues();
+        System.err.println("done.");
+        System.err.println("        distinct name values: " + otherNames.size());
+
+        System.err.print(  "    compute intersection                  ");
+        thisNames.retainAll(otherNames);
+        System.err.println("done.");
+        System.err.println("    All done. Distinct name values: " + thisNames.size());
+
+        return thisNames;
     }
 
 
