@@ -36,10 +36,12 @@ public class Main {
         final CommandAddParametes commandAdd = new CommandAddParametes();
         final FindDupeCandidatesParameters commandFind = new FindDupeCandidatesParameters();
         final CalcChecksumParameters commandCalcSum = new CalcChecksumParameters();
+        final CommandMergeChecksum commandMergeChecksum = new CommandMergeChecksum();
         final JCommander jc = new JCommander(p);
         jc.addCommand("add", commandAdd);
         jc.addCommand("find", commandFind);
         jc.addCommand("calcsum", commandCalcSum);
+        jc.addCommand("mergesum", commandMergeChecksum);
         jc.parse(args);
 
         if (p.help) {
@@ -120,6 +122,12 @@ public class Main {
                     qids = qm.idsFromSizes(sizes);
                     tids = tm.idsFromSizes(sizes);
                     break;
+                case CHECKSUM:
+                    final Set<String> sums = tm.matchingChecksums(commandFind.s, qm);
+                    qids = qm.idsFromNames(sums);
+                    tids = tm.idsFromNames(sums);
+                    break;
+
                 default:
                     throw new AssertionError();
             }
@@ -167,6 +175,21 @@ public class Main {
 
             }
             System.err.println("    Done.");
+        } else if ("mergesum".equals(jc.getParsedCommand())) {
+            System.err.println("Read model: " + commandMergeChecksum.b);
+            final Model m;
+            try (ObjectInputStream ois = Util.ois(commandMergeChecksum.b)) {
+                m = (Model) ois.readObject();
+            }
+            System.err.println("   Done. Size: " + m.size());
+
+            m.addChecksums(commandMergeChecksum.s,  FileUtils.readLines(new File(commandMergeChecksum.i), Charsets.UTF_8));
+
+            System.err.println("Write to " + commandMergeChecksum.b);
+            try (ObjectOutputStream oos = Util.oos(commandMergeChecksum.b)) {
+                oos.writeObject(m);
+                System.err.println("    Done.");
+            }
 
         } else {
             throw new IllegalArgumentException("No command specified");

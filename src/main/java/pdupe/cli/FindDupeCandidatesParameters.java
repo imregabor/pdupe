@@ -12,7 +12,7 @@ import com.beust.jcommander.Parameters;
 public class FindDupeCandidatesParameters {
 
     enum MatchMode {
-        SIZE, NAME
+        SIZE, NAME, CHECKSUM
     }
 
     @Parameter(names = "-q", required = true, description = "Query binary blob to read.")
@@ -21,8 +21,11 @@ public class FindDupeCandidatesParameters {
     @Parameter(names = "-t", required = true, description = "Target binary blob to read.")
     String t;
 
-    @Parameter(names = "-m", description = "Match mode (use SIZE or NAME).")
+    @Parameter(names = "-m", description = "Match mode (use SIZE, NAME or CHECKSUM).")
     MatchMode mm = MatchMode.SIZE;
+
+    @Parameter(names = "-s", description = "Checksum type for CHECKSUM match.")
+    String s = "SHA512";
 
     @Parameter(names = "-oq", description = "Text file to write selected query files.")
     String oq;

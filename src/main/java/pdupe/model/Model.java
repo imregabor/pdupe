@@ -7,8 +7,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import pdupe.util.BiMaps;
+import pdupe.util.ChecksumEntry;
 import pdupe.util.HashMultiBiMap;
 import pdupe.util.MultiBiMap;
 
@@ -44,6 +48,14 @@ public class Model implements Serializable {
     private final MultiBiMap<Long, String> idToName;
 
     /**
+     * Checksums.
+     *
+     * Outer map: checksum type to checksums
+     * Inner maps: id to checksum
+     */
+    private final Map<String, MultiBiMap<Long, String>> idToChecksum;
+
+    /**
      * Create an empty store.
      */
     public Model() {
@@ -51,6 +63,7 @@ public class Model implements Serializable {
         this.idToCanonicalPath = HashBiMap.create(100000);
         this.idToSize = HashMultiBiMap.create();
         this.idToName = HashMultiBiMap.create();
+        this.idToChecksum = new HashMap<>();
 
     }
 
@@ -81,6 +94,28 @@ public class Model implements Serializable {
         return thisSizes;
     }
 
+    public void addChecksums(String type, List<String> checksumLines) {
+        if (!this.idToChecksum.containsKey(type)) {
+            this.idToChecksum.put(type, HashMultiBiMap.<Long, String>create());
+        }
+        final MultiBiMap<Long, String> sums = this.idToChecksum.get(type);
+        for (String s : checksumLines) {
+            final ChecksumEntry e = new ChecksumEntry(s);
+            if (!this.idToCanonicalPath.containsValue(e.getFile())) {
+                throw new IllegalArgumentException("File not found in storage " + e.getFile());
+            }
+            sums.put(this.idToCanonicalPath.inverse().get(e.getFile()), e.getChecksum());
+        }
+    }
+
+    public Collection<Long> idsFromChecksums(String type, Collection<String> checksums) {
+        System.err.println("idsFromChecksums(" + type + ", ...)");
+        System.err.println("    Input size:  " + checksums.size());
+        final Collection<Long> ret = this.idToChecksum.get(type).getKeys(checksums);
+        System.err.println("    Result size: " + ret.size());
+        return ret;
+    }
+
 
     public Collection<Long> idsFromNames(Collection<String> names) {
         System.err.println("idsFromNames()");
@@ -105,6 +140,35 @@ public class Model implements Serializable {
     public Set<String> pathesFromNames(Collection<String> names) {
         return BiMaps.values(this.idToCanonicalPath, this.idToName.getKeys(names));
     }
+
+    /**
+     * Checksums occurring in both sets.
+     *
+     * @param type Checksum type
+     * @param other Other set
+     * @return Checksums occurring in both sets
+     */
+    public Set<String> matchingChecksums(String type, Model other) {
+        System.err.println("nameMatchChecksums(...)");
+
+        System.err.print(  "    collection checksums from this (target)   ");
+        final Set<String> thisChecksums = this.idToChecksum.get(type).uniqueValues();
+        System.err.println("done.");
+        System.err.println("        distinct sum values: " + thisChecksums.size());
+
+        System.err.print(  "    collection names from query           ");
+        final Set<String> otherChecksums = other.idToChecksum.get(type).uniqueValues();
+        System.err.println("done.");
+        System.err.println("        distinct sum values: " + otherChecksums.size());
+
+        System.err.print(  "    compute intersection                  ");
+        thisChecksums.retainAll(otherChecksums);
+        System.err.println("done.");
+        System.err.println("    All done. Distinct sum values: " + thisChecksums.size());
+
+        return thisChecksums;
+    }
+
 
     /**
      * Names occurring in both sets.

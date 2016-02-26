@@ -43,4 +43,69 @@ public class HashingTest {
         assertThat(digestHex, is("2c74fd17edafd80e8447b0d46741ee243b7eb74dd2149a0ab1b9246fb30382f27e853d8585719e0e67cbda0daa8f51671064615d645ae27acb15bfb1447f459b"));
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_surplus_space_found_1() {
+        final String line = " 728519933d0731e980043c61fd7ad *plainfile.txt";
+        new ChecksumEntry(line);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_surplus_space_found_2() {
+        final String line = "728519933d0731e980043c61fd7ad ";
+        new ChecksumEntry(line);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_surplus_space_found_3() {
+        final String line = " 728519933d0731e980043c61fd7ad *";
+        new ChecksumEntry(line);
+    }
+
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_no_space_star_separator_found_1() {
+        final String line = "728519933d0731e980043c61fd7ad plainfile.txt";
+        new ChecksumEntry(line);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_no_space_star_separator_found_2() {
+        final String line = "728519933d0731e980043c61fd7ad  plainfile.txt";
+        new ChecksumEntry(line);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_no_space_star_separator_found_3() {
+        final String line = "728519933d0731e980043c61fd7ad\t*plainfile.txt";
+        new ChecksumEntry(line);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_no_space_star_separator_found_4() {
+        final String line = "728519933d0731e980043c61fd7ad*plainfile.txt";
+        new ChecksumEntry(line);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_no_space_star_separator_found_5() {
+        final String line = "728519933d0731e980043c61fd7ad* plainfile.txt";
+        new ChecksumEntry(line);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_no_space_star_separator_found_6() {
+        final String line = "728519933d0731e980043c61fd7ad  * plainfile.txt";
+        new ChecksumEntry(line);
+    }
+
+    @Test
+    public void checksum_line_splitting() {
+        final ChecksumEntry e1 = new ChecksumEntry("728519933d0731e980043c61ff276f4ed36174bfd7ad *a:\\\\__b/c/d e * f  ***    gh\\n ");
+        assertThat(e1.getChecksum(), is("728519933d0731e980043c61ff276f4ed36174bfd7ad"));
+        assertThat(e1.getFile(), is("a:\\\\__b/c/d e * f  ***    gh\\n "));
+
+        final ChecksumEntry e2 = new ChecksumEntry("7 *\\");
+        assertThat(e2.getChecksum(), is("7"));
+        assertThat(e2.getFile(), is("\\"));
+    }
 }
