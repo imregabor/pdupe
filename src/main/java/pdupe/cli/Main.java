@@ -3,15 +3,21 @@
 package pdupe.cli;
 
 import com.beust.jcommander.JCommander;
+import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
 import pdupe.model.Model;
 import pdupe.model.TraverseWatcher;
@@ -25,13 +31,15 @@ import pdupe.util.Util;
  */
 public class Main {
 
-    public static void main(String [] args) throws IOException, ClassNotFoundException {
+    public static void main(String [] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
         final MainParameters p = new MainParameters();
         final CommandAddParametes commandAdd = new CommandAddParametes();
         final FindDupeCandidatesParameters commandFind = new FindDupeCandidatesParameters();
+        final CalcChecksumParameters commandCalcSum = new CalcChecksumParameters();
         final JCommander jc = new JCommander(p);
         jc.addCommand("add", commandAdd);
         jc.addCommand("find", commandFind);
+        jc.addCommand("calcsum", commandCalcSum);
         jc.parse(args);
 
         if (p.help) {
@@ -126,6 +134,40 @@ public class Main {
             }
 
             System.err.println("All done.");
+        } else if ("calcsum".equals(jc.getParsedCommand())) {
+
+            System.err.println("Read files list from " + commandCalcSum.i);
+            final List<String> files = FileUtils.readLines(new File(commandCalcSum.i), Charsets.UTF_8);
+            System.err.println("   Read " + files.size() + " file names");
+
+            final MessageDigest md = MessageDigest.getInstance(commandCalcSum.m.getConst());
+
+            try (PrintStream ps = Util.ps(commandCalcSum.o)) {
+                int n = 0;
+                long l = 0;
+                long t = System.currentTimeMillis();
+                final long tt0 = t;
+                for(String f : files) {
+                    final byte[] plain = FileUtils.readFileToByteArray(new File(f));
+                    final byte[] digest = md.digest(plain);
+                    final String digestHex = Hex.encodeHexString(digest);
+                    ps.println(digestHex + " *" + f);
+
+                    n++;
+                    l+= plain.length;
+                    final long tt = System.currentTimeMillis();
+
+                    if (tt - t >= 5000) {
+                        final long dt = tt - tt0 == 0 ? 1 : tt - tt0;
+                        System.err.println("   Processed " + n + " files, total size " + Util.formatSi(l) + "B, throughput " + Util.formatSi(1000 * l / dt) + "B/s");
+                        t = tt;
+                    }
+
+                }
+
+            }
+            System.err.println("    Done.");
+
         } else {
             throw new IllegalArgumentException("No command specified");
         }

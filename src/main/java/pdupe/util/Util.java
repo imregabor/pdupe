@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -104,6 +105,18 @@ public final class Util {
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    public static PrintStream ps(String location) {
+        try {
+            final OutputStream fos = new FileOutputStream(location);
+            final OutputStream bos = new BufferedOutputStream(fos);
+            final PrintStream ps = new PrintStream(bos, true, "UTF-8");
+            return ps;
+        } catch (IOException e) {
+            throw new IllegalArgumentException(e);
+        }
+
     }
 
     public static Optional<File> nonExistenFileFromNullable(String location) {
