@@ -3,6 +3,11 @@
 package pdupe.cli;
 
 import com.beust.jcommander.JCommander;
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.imaging.ImageProcessingException;
+import com.drew.metadata.Directory;
+import com.drew.metadata.Metadata;
+import com.drew.metadata.Tag;
 import com.google.common.base.Predicate;
 import java.io.File;
 import java.io.IOException;
@@ -28,7 +33,7 @@ import pdupe.util.Util;
  */
 public class Main {
 
-    public static void main(String [] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException, NoSuchFieldException {
+    public static void main(String [] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException, NoSuchFieldException, ImageProcessingException {
 
 
         final MainParameters p = new MainParameters();
@@ -37,11 +42,13 @@ public class Main {
         final FindDupeCandidatesParameters commandFind = new FindDupeCandidatesParameters();
         final CalcChecksumParameters commandCalcSum = new CalcChecksumParameters();
         final CommandMergeChecksum commandMergeChecksum = new CommandMergeChecksum();
+        final CommandShowMetadataParameters commandShowMetadataParameters = new CommandShowMetadataParameters();
         final JCommander jc = new JCommander(p);
         jc.addCommand("add", commandAdd);
         jc.addCommand("find", commandFind);
         jc.addCommand("calcsum", commandCalcSum);
         jc.addCommand("mergesum", commandMergeChecksum);
+        jc.addCommand("showmeta", commandShowMetadataParameters);
 
         jc.parse(args);
 
@@ -161,6 +168,20 @@ public class Main {
 
             System.err.println("Done.");
 
+        } else if ("showmeta".equals(jc.getParsedCommand())) {
+            final Metadata metadata = ImageMetadataReader.readMetadata(commandShowMetadataParameters.i);
+            System.out.println("Metadata read from " + commandShowMetadataParameters.i);
+            System.out.println();
+            for (Directory directory : metadata.getDirectories()) {
+                for (Tag tag : directory.getTags()) {
+                    System.out.format("[%s] - %s = %s\n", directory.getName(), tag.getTagName(), tag.getDescription());
+                }
+                if (directory.hasErrors()) {
+                    for (String error : directory.getErrors()) {
+                        System.out.format("ERROR: %s", error);
+                    }
+                }
+            }
         } else {
             throw new IllegalArgumentException("No command specified");
         }

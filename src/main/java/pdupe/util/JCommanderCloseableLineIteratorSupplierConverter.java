@@ -6,8 +6,6 @@ import java.io.File;
 import org.apache.commons.io.LineIterator;
 
 /**
- * Type converter for PrintStream outputs.
- *
  * @author Gabor Imre
  */
 public class JCommanderCloseableLineIteratorSupplierConverter implements IStringConverter<Supplier<CloseableLineIterator>> {

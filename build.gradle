@@ -15,6 +15,7 @@ idea {
     }
 }
 
+sourceCompatibility = '1.8'
 
 repositories {
     mavenCentral()
@@ -26,6 +27,7 @@ dependencies {
     compile 'commons-logging:commons-logging:1.2'
     compile 'commons-io:commons-io:2.4'
     compile 'commons-codec:commons-codec:1.10'
+    compile 'com.drewnoakes:metadata-extractor:2.8.1' // see https://drewnoakes.com/code/exif/
     testCompile 'junit:junit:4.12'
     testCompile 'org.hamcrest:hamcrest-all:1.3'
 

@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 
 /**
- * Type converter for PrintStream outputs.
- *
  * @author Gabor Imre
  */
 public class JCommanderObjecSerializeSink implements IStringConverter<Sink<Object>> {
