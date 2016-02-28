@@ -1,5 +1,6 @@
 package pdupe.model;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -10,11 +11,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.NoSuchElementException;
+import pdupe.cli.Checksum;
 import pdupe.util.BiMaps;
 import pdupe.util.ChecksumEntry;
-import pdupe.util.HashMultiBiMap;
-import pdupe.util.MultiBiMap;
 
 /**
  * Data model.
@@ -40,20 +40,19 @@ public class Model implements Serializable {
     /**
      * File size.
      */
-    private final MultiBiMap<Long, Long> idToSize;
+    private final FileSizeAttribute fileSize;
 
     /**
      * Map file name to ID.
      */
-    private final MultiBiMap<Long, String> idToName;
+    private final FileNameAttribute fileName;
 
     /**
      * Checksums.
      *
      * Outer map: checksum type to checksums
-     * Inner maps: id to checksum
      */
-    private final Map<String, MultiBiMap<Long, String>> idToChecksum;
+    private final Map<String, FileChecksumAttribute> checksums;
 
     /**
      * Create an empty store.
@@ -61,142 +60,58 @@ public class Model implements Serializable {
     public Model() {
         this.nextAvailableId = 0;
         this.idToCanonicalPath = HashBiMap.create(100000);
-        this.idToSize = HashMultiBiMap.create();
-        this.idToName = HashMultiBiMap.create();
-        this.idToChecksum = new HashMap<>();
+
+        this.fileName = new FileNameAttribute();
+        this.fileSize = new FileSizeAttribute();
+        this.checksums = new HashMap<>();
 
     }
 
     /**
-     * Sizes occurring in both sets.
+     * Retrieve an attribute.
      *
-     * @param other Other set
-     * @return File sizes occurring in both sets
+     * @param attributeName Attribute name
+     * @return Attribute
+     * @throws NoSuchElementException when specified attribute not fount
      */
-    public Set<Long> matchingSizes(Model other) {
-        System.err.println("matchingSizes(...)");
-
-        System.err.print(  "    collection sizes from this            ");
-        final Set<Long> thisSizes = this.idToSize.uniqueValues();
-        System.err.println("done.");
-        System.err.println("        distinct size values: " + thisSizes.size());
-
-        System.err.print(  "    collection sizes from query           ");
-        final Set<Long> otherSizes = other.idToSize.uniqueValues();
-        System.err.println("done.");
-        System.err.println("        distinct size values: " + otherSizes.size());
-
-        System.err.print(  "    compute intersection                  ");
-        thisSizes.retainAll(otherSizes);
-        System.err.println("done.");
-        System.err.println("    All done. Distinct size values: " + thisSizes.size());
-
-        return thisSizes;
-    }
-
-    public void addChecksums(String type, List<String> checksumLines) {
-        if (!this.idToChecksum.containsKey(type)) {
-            this.idToChecksum.put(type, HashMultiBiMap.<Long, String>create());
+    public Attribute getAttribute(String attributeName) {
+        if ("name".equals(attributeName)) {
+            return this.fileName;
+        } else if ("size".equals(attributeName)) {
+            return this.fileSize;
+        } else if (this.checksums.containsKey(attributeName)) {
+            return this.checksums.get(attributeName);
+        } else {
+            throw new NoSuchElementException("Attribute not found \"" + attributeName + "\"");
         }
-        final MultiBiMap<Long, String> sums = this.idToChecksum.get(type);
-        for (String s : checksumLines) {
-            final ChecksumEntry e = new ChecksumEntry(s);
-            if (!this.idToCanonicalPath.containsValue(e.getFile())) {
-                throw new IllegalArgumentException("File not found in storage " + e.getFile());
-            }
-            sums.put(this.idToCanonicalPath.inverse().get(e.getFile()), e.getChecksum());
-        }
-    }
-
-    public Collection<Long> idsFromChecksums(String type, Collection<String> checksums) {
-        System.err.println("idsFromChecksums(" + type + ", ...)");
-        System.err.println("    Input size:  " + checksums.size());
-        final Collection<Long> ret = this.idToChecksum.get(type).getKeys(checksums);
-        System.err.println("    Result size: " + ret.size());
-        return ret;
-    }
-
-
-    public Collection<Long> idsFromNames(Collection<String> names) {
-        System.err.println("idsFromNames()");
-        System.err.println("    Input size:  " + names.size());
-        final Collection<Long> ret = this.idToName.getKeys(names);
-        System.err.println("    Result size: " + ret.size());
-        return ret;
-    }
-
-    public Collection<Long> idsFromSizes(Collection<Long> sizes) {
-        System.err.println("idsFromSizes()");
-        System.err.println("    Input size:  " + sizes.size());
-        final Collection<Long> ret = this.idToSize.getKeys(sizes);
-        System.err.println("    Result size: " + ret.size());
-        return ret;
     }
 
     public Collection<String> pathesFromIds(Collection<Long> ids) {
         return BiMaps.values(this.idToCanonicalPath, ids);
     }
 
-    public Set<String> pathesFromNames(Collection<String> names) {
-        return BiMaps.values(this.idToCanonicalPath, this.idToName.getKeys(names));
-    }
 
-    /**
-     * Checksums occurring in both sets.
-     *
-     * @param type Checksum type
-     * @param other Other set
-     * @return Checksums occurring in both sets
-     */
-    public Set<String> matchingChecksums(String type, Model other) {
-        System.err.println("nameMatchChecksums(...)");
 
-        System.err.print(  "    collection checksums from this (target)   ");
-        final Set<String> thisChecksums = this.idToChecksum.get(type).uniqueValues();
-        System.err.println("done.");
-        System.err.println("        distinct sum values: " + thisChecksums.size());
-
-        System.err.print(  "    collection names from query           ");
-        final Set<String> otherChecksums = other.idToChecksum.get(type).uniqueValues();
-        System.err.println("done.");
-        System.err.println("        distinct sum values: " + otherChecksums.size());
-
-        System.err.print(  "    compute intersection                  ");
-        thisChecksums.retainAll(otherChecksums);
-        System.err.println("done.");
-        System.err.println("    All done. Distinct sum values: " + thisChecksums.size());
-
-        return thisChecksums;
+    FileChecksumAttribute ensureChecksum(Checksum type) {
+        Preconditions.checkNotNull(type);
+        if (!this.checksums.containsKey(type.name())) {
+            this.checksums.put(type.name(), new FileChecksumAttribute(type.getAlgorithm()));
+        }
+        return this.checksums.get(type.name());
     }
 
 
-    /**
-     * Names occurring in both sets.
-     *
-     * @param other Other set
-     * @return File names occurring in both sets
-     */
-    public Set<String> matchingNames(Model other) {
-        System.err.println("nameMatchIds(...)");
+    public void addChecksums(List<String> checksumLines) {
 
-        System.err.print(  "    collection names from this (target)   ");
-        final Set<String> thisNames = this.idToName.uniqueValues();
-        System.err.println("done.");
-        System.err.println("        distinct name values: " + thisNames.size());
-
-        System.err.print(  "    collection names from query           ");
-        final Set<String> otherNames = other.idToName.uniqueValues();
-        System.err.println("done.");
-        System.err.println("        distinct name values: " + otherNames.size());
-
-        System.err.print(  "    compute intersection                  ");
-        thisNames.retainAll(otherNames);
-        System.err.println("done.");
-        System.err.println("    All done. Distinct name values: " + thisNames.size());
-
-        return thisNames;
+        for (String s : checksumLines) {
+            final ChecksumEntry e = new ChecksumEntry(s);
+            if (!this.idToCanonicalPath.containsValue(e.getFile())) {
+                throw new IllegalArgumentException("File not found in storage " + e.getFile());
+            }
+            final FileChecksumAttribute checksum = ensureChecksum(e.getMethod());
+            checksum.put(this.idToCanonicalPath.inverse().get(e.getFile()), e.getChecksum());
+        }
     }
-
 
     /**
      * Store a new file.
@@ -206,9 +121,7 @@ public class Model implements Serializable {
      * @param ignoreFile Predicate to ignore canonical path of the file to be added or {@code null}.
      */
     public void addFile(File f, TraverseWatcher w, Predicate<String> ignoreFile) {
-
         final String cp;
-        final String name = f.getName();
         final long  siz;
         try {
             if (!f.exists()) {
@@ -233,9 +146,8 @@ public class Model implements Serializable {
             }
         } else {
             this.idToCanonicalPath.put(this.nextAvailableId, cp);
-            this.idToSize.put(this.nextAvailableId, siz);
-            this.idToName.put(this.nextAvailableId, name);
-            final long ret = this.nextAvailableId;
+            this.fileSize.putFile(this.nextAvailableId, f);
+            this.fileName.putFile(this.nextAvailableId, f);
             this.nextAvailableId++;
             if (w != null) {
                 w.fileToBeAdded(cp, siz);
@@ -324,7 +236,7 @@ public class Model implements Serializable {
     public void list(StringBuilder out, int count) {
         out.append("Size\tPath\n");
         for(long l = 0; l < this.nextAvailableId && l < count; l++) {
-            out.append(this.idToSize.get(l)).append("\t").append(this.idToCanonicalPath.get(l)).append("\n");
+            out.append(this.fileSize.get(l)).append("\t").append(this.idToCanonicalPath.get(l)).append("\n");
         }
         if (this.nextAvailableId > count) {
             out.append("\n")

@@ -3,13 +3,9 @@
 package pdupe.cli;
 
 import com.beust.jcommander.JCommander;
-import com.google.common.base.Charsets;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import java.io.File;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -19,6 +15,7 @@ import java.util.List;
 import java.util.Set;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.FileUtils;
+import pdupe.model.Attribute;
 import pdupe.model.Model;
 import pdupe.model.TraverseWatcher;
 import pdupe.model.VerbosingWatcher;
@@ -31,8 +28,11 @@ import pdupe.util.Util;
  */
 public class Main {
 
-    public static void main(String [] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
+    public static void main(String [] args) throws IOException, ClassNotFoundException, NoSuchAlgorithmException, NoSuchFieldException {
+
+
         final MainParameters p = new MainParameters();
+
         final CommandAddParametes commandAdd = new CommandAddParametes();
         final FindDupeCandidatesParameters commandFind = new FindDupeCandidatesParameters();
         final CalcChecksumParameters commandCalcSum = new CalcChecksumParameters();
@@ -42,6 +42,7 @@ public class Main {
         jc.addCommand("find", commandFind);
         jc.addCommand("calcsum", commandCalcSum);
         jc.addCommand("mergesum", commandMergeChecksum);
+
         jc.parse(args);
 
         if (p.help) {
@@ -87,70 +88,43 @@ public class Main {
             System.err.println("Peek into storage");
             System.err.println();
             System.err.println(m.list(20));
+            System.err.println();
 
             System.err.println("Write to " + commandAdd.outfile);
-            try (ObjectOutputStream oos = Util.oos(commandAdd.outfile)) {
-                oos.writeObject(m);
-                System.err.println("    Done.");
-            }
+            commandAdd.outfile.put(m);
+            System.err.println("Done");
 
         } else if ("find".equals(jc.getParsedCommand())) {
-            System.err.println("Read query: " + commandFind.q);
-            final Model qm;
-            try (ObjectInputStream ois = Util.ois(commandFind.q)) {
-                qm = (Model) ois.readObject();
-            }
-            System.err.println("   Done. Size: " + qm.size());
-            System.err.println("Read target: " + commandFind.t);
-            final Model tm;
-            try (ObjectInputStream ois = Util.ois(commandFind.t)) {
-                tm = (Model) ois.readObject();
-            }
-            System.err.println("   Done. Size: " + tm.size());
+            System.err.println("Read query blob from " + commandFind.q);
+            final Model qm = (Model) commandFind.q.get();
+            System.err.println("Read target from " + commandFind.t);
+            final Model tm = (Model) commandFind.t.get();
+            System.err.println("Done. Query size: " + qm.size() + ", target size: " + tm.size());
 
 
-            final Collection<Long> qids;
-            final Collection<Long> tids;
-            switch (commandFind.mm) {
-                case NAME:
-                    final Set<String> names = tm.matchingNames(qm);
-                    qids = qm.idsFromNames(names);
-                    tids = tm.idsFromNames(names);
-                    break;
-                case SIZE:
-                    final Set<Long> sizes = tm.matchingSizes(qm);
-                    qids = qm.idsFromSizes(sizes);
-                    tids = tm.idsFromSizes(sizes);
-                    break;
-                case CHECKSUM:
-                    final Set<String> sums = tm.matchingChecksums(commandFind.s, qm);
-                    qids = qm.idsFromNames(sums);
-                    tids = tm.idsFromNames(sums);
-                    break;
+            final Attribute targetAttribute = tm.getAttribute(commandFind.a);
+            final Attribute queryAttribute = qm.getAttribute(commandFind.a);
+            final Set common = targetAttribute.commonValues(queryAttribute);
+            final Collection<Long> qids = queryAttribute.getKeys(common);
+            final Collection<Long> tids = targetAttribute.getKeys(common);
 
-                default:
-                    throw new AssertionError();
+            if (commandFind.oq != null) {
+                commandFind.oq.put(qm.pathesFromIds(qids));
             }
-
-            final Optional<File> oqf = Util.nonExistenFileFromNullable(commandFind.oq);
-            final Optional<File> otf = Util.nonExistenFileFromNullable(commandFind.ot);
-            if (oqf.isPresent()) {
-                FileUtils.writeLines(oqf.get(), "UTF-8", qm.pathesFromIds(qids));
-            }
-            if (otf.isPresent()) {
-                FileUtils.writeLines(otf.get(), "UTF-8", tm.pathesFromIds(tids));
+            if (commandFind.ot != null) {
+                commandFind.ot.put(tm.pathesFromIds(tids));
             }
 
             System.err.println("All done.");
         } else if ("calcsum".equals(jc.getParsedCommand())) {
 
             System.err.println("Read files list from " + commandCalcSum.i);
-            final List<String> files = FileUtils.readLines(new File(commandCalcSum.i), Charsets.UTF_8);
+            final List<String> files = commandCalcSum.i.get();
             System.err.println("   Read " + files.size() + " file names");
 
-            final MessageDigest md = MessageDigest.getInstance(commandCalcSum.m.getConst());
+            final MessageDigest md = MessageDigest.getInstance(commandCalcSum.m.getAlgorithm());
 
-            try (PrintStream ps = Util.ps(commandCalcSum.o)) {
+            try (PrintStream ps = commandCalcSum.o.get()) {
                 int n = 0;
                 long l = 0;
                 long t = System.currentTimeMillis();
@@ -159,7 +133,7 @@ public class Main {
                     final byte[] plain = FileUtils.readFileToByteArray(new File(f));
                     final byte[] digest = md.digest(plain);
                     final String digestHex = Hex.encodeHexString(digest);
-                    ps.println(digestHex + " *" + f);
+                    ps.println(commandCalcSum.m.name() + " " + digestHex + " *" + f);
 
                     n++;
                     l+= plain.length;
@@ -172,24 +146,20 @@ public class Main {
                     }
 
                 }
-
             }
             System.err.println("    Done.");
         } else if ("mergesum".equals(jc.getParsedCommand())) {
-            System.err.println("Read model: " + commandMergeChecksum.b);
-            final Model m;
-            try (ObjectInputStream ois = Util.ois(commandMergeChecksum.b)) {
-                m = (Model) ois.readObject();
-            }
+
+            System.err.println("Read model: " + commandMergeChecksum.bi);
+            final Model m = (Model) commandMergeChecksum.bi.get();
             System.err.println("   Done. Size: " + m.size());
 
-            m.addChecksums(commandMergeChecksum.s,  FileUtils.readLines(new File(commandMergeChecksum.i), Charsets.UTF_8));
+            m.addChecksums(commandMergeChecksum.ci.get());
 
-            System.err.println("Write to " + commandMergeChecksum.b);
-            try (ObjectOutputStream oos = Util.oos(commandMergeChecksum.b)) {
-                oos.writeObject(m);
-                System.err.println("    Done.");
-            }
+            System.err.println("Write to " + commandMergeChecksum.bo);
+            commandMergeChecksum.bo.put(m);
+
+            System.err.println("Done.");
 
         } else {
             throw new IllegalArgumentException("No command specified");

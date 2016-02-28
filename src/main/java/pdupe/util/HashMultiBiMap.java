@@ -9,6 +9,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Hash based implementation of {@link MultiBiMap}.
@@ -18,7 +20,9 @@ import java.util.Set;
  *
  * @author Gabor Imre
  */
-public final class HashMultiBiMap<K, V> implements MultiBiMap<K, V> {
+public class HashMultiBiMap<K, V> implements MultiBiMap<K, V> {
+
+    private final Log log = LogFactory.getLog(HashMultiBiMap.class);
 
     private static final long serialVersionUID = 0;
 
@@ -32,7 +36,7 @@ public final class HashMultiBiMap<K, V> implements MultiBiMap<K, V> {
      */
     private final Multimap<V, K> reverse;
 
-    private HashMultiBiMap() {
+    protected HashMultiBiMap() {
         this.forward = new HashMap<>();
         this.reverse = HashMultimap.create();
     }
@@ -88,6 +92,7 @@ public final class HashMultiBiMap<K, V> implements MultiBiMap<K, V> {
 
     @Override
     public Collection<K> getKeys(Collection<V> values) {
+        if (this.log.isInfoEnabled()) { this.log.info("getKeys(); value count: " + values.size()); }
         final List<K> ret = new ArrayList<>();
         for (V v : values) {
             final Collection<K> keys = this.reverse.get(v);
@@ -96,7 +101,24 @@ public final class HashMultiBiMap<K, V> implements MultiBiMap<K, V> {
             }
             ret.addAll(keys);
         }
+        if (this.log.isInfoEnabled()) { this.log.info("    done, return size: " + ret.size()); }
         return ret;
+    }
+
+    @Override
+    public Set<V> commonValues(MultiBiMap<K, V> other) {
+        if (this.log.isInfoEnabled()) { this.log.info("commonValues()"); }
+        if (this.log.isInfoEnabled()) { this.log.info("  collect values from this (target)"); }
+        final Set<V> thisValues = this.uniqueValues();
+        if (this.log.isInfoEnabled()) { this.log.info("  done. distinct values: " + thisValues.size()); }
+        if (this.log.isInfoEnabled()) { this.log.info("  collect values from other (query)"); }
+        final Set<V> otherValues = other.uniqueValues();
+        if (this.log.isInfoEnabled()) { this.log.info("  done. distinct values: " + otherValues.size()); }
+        if (this.log.isInfoEnabled()) { this.log.info("  compute intersection"); }
+        thisValues.retainAll(otherValues);
+        if (this.log.isInfoEnabled()) { this.log.info("  done. common values:   " + thisValues.size()); }
+        return thisValues;
+
     }
 
 

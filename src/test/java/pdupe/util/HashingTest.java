@@ -7,6 +7,7 @@ import org.apache.commons.codec.binary.Hex;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import org.junit.Test;
+import pdupe.cli.Checksum;
 
 /**
  * @author Gabor Imre
@@ -45,66 +46,107 @@ public class HashingTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void checksum_line_splitting_fails_when_surplus_space_found_1() {
-        final String line = " 728519933d0731e980043c61fd7ad *plainfile.txt";
+        final String line = " SHA1 728519933d0731e980043c61fd7ad *plainfile.txt";
         new ChecksumEntry(line);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void checksum_line_splitting_fails_when_surplus_space_found_2() {
-        final String line = "728519933d0731e980043c61fd7ad ";
+        final String line = "SHA1 728519933d0731e980043c61fd7ad ";
         new ChecksumEntry(line);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void checksum_line_splitting_fails_when_surplus_space_found_3() {
-        final String line = " 728519933d0731e980043c61fd7ad *";
+        final String line = " SHA1 728519933d0731e980043c61fd7ad *";
         new ChecksumEntry(line);
     }
 
 
     @Test(expected = IllegalArgumentException.class)
     public void checksum_line_splitting_fails_when_no_space_star_separator_found_1() {
-        final String line = "728519933d0731e980043c61fd7ad plainfile.txt";
+        final String line = "SHA1 728519933d0731e980043c61fd7ad plainfile.txt";
         new ChecksumEntry(line);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void checksum_line_splitting_fails_when_no_space_star_separator_found_2() {
-        final String line = "728519933d0731e980043c61fd7ad  plainfile.txt";
+        final String line = "SHA1 728519933d0731e980043c61fd7ad  plainfile.txt";
         new ChecksumEntry(line);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void checksum_line_splitting_fails_when_no_space_star_separator_found_3() {
-        final String line = "728519933d0731e980043c61fd7ad\t*plainfile.txt";
+        final String line = "SHA1 728519933d0731e980043c61fd7ad\t*plainfile.txt";
         new ChecksumEntry(line);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void checksum_line_splitting_fails_when_no_space_star_separator_found_4() {
-        final String line = "728519933d0731e980043c61fd7ad*plainfile.txt";
+        final String line = "SHA1 728519933d0731e980043c61fd7ad*plainfile.txt";
         new ChecksumEntry(line);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void checksum_line_splitting_fails_when_no_space_star_separator_found_5() {
-        final String line = "728519933d0731e980043c61fd7ad* plainfile.txt";
+        final String line = "SHA1 728519933d0731e980043c61fd7ad* plainfile.txt";
         new ChecksumEntry(line);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void checksum_line_splitting_fails_when_no_space_star_separator_found_6() {
-        final String line = "728519933d0731e980043c61fd7ad  * plainfile.txt";
+        final String line = "SHA1 728519933d0731e980043c61fd7ad  * plainfile.txt";
         new ChecksumEntry(line);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_no_method_found() {
+        final String line = "728519933d0731e980043c61ff276f4ed36174bfd7ad *file.txt";
+        new ChecksumEntry(line);
+    }
+
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_only_method_found_1() {
+        final String line = "SHA1";
+        new ChecksumEntry(line);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_only_method_found_2() {
+        final String line = "SHA1 ";
+        new ChecksumEntry(line);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_only_method_found_3() {
+        final String line = "SHA1  *";
+        new ChecksumEntry(line);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_only_method_found_4() {
+        final String line = "SHA1  * ";
+        new ChecksumEntry(line);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void checksum_line_splitting_fails_when_only_method_found_5() {
+        final String line = "SHA1  *  ";
+        new ChecksumEntry(line);
+    }
+
+
+
     @Test
     public void checksum_line_splitting() {
-        final ChecksumEntry e1 = new ChecksumEntry("728519933d0731e980043c61ff276f4ed36174bfd7ad *a:\\\\__b/c/d e * f  ***    gh\\n ");
+        final ChecksumEntry e1 = new ChecksumEntry("SHA1 728519933d0731e980043c61ff276f4ed36174bfd7ad *a:\\\\__b/c/d e * f  ***    gh\\n ");
+        assertThat(e1.getMethod(), is(Checksum.SHA1));
         assertThat(e1.getChecksum(), is("728519933d0731e980043c61ff276f4ed36174bfd7ad"));
         assertThat(e1.getFile(), is("a:\\\\__b/c/d e * f  ***    gh\\n "));
 
-        final ChecksumEntry e2 = new ChecksumEntry("7 *\\");
+        final ChecksumEntry e2 = new ChecksumEntry("MD5 7 *\\");
+        assertThat(e2.getMethod(), is(Checksum.MD5));
         assertThat(e2.getChecksum(), is("7"));
         assertThat(e2.getFile(), is("\\"));
     }

@@ -1,5 +1,6 @@
 package pdupe.util;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -17,6 +18,8 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.LineIterator;
 
 /**
  * Misc utilities.
@@ -119,6 +122,16 @@ public final class Util {
 
     }
 
+    public static LineIterator lineIterator(String location) {
+        try {
+            final InputStream fis = new FileInputStream(location);
+            final InputStream bis = new BufferedInputStream(fis);
+            return IOUtils.lineIterator(bis, Charsets.UTF_8);
+        } catch (IOException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
     public static Optional<File> nonExistenFileFromNullable(String location) {
         if (location == null) {
             return Optional.<File>absent();
@@ -130,6 +143,6 @@ public final class Util {
         return Optional.of(ret);
     }
 
-    
+
 
 }

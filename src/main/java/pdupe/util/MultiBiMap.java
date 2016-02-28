@@ -60,4 +60,12 @@ public interface MultiBiMap<K, V> extends Serializable {
      * @return Unique values as a set
      */
     Set<V> uniqueValues();
+
+    /**
+     * Values occurring in both maps.
+     *
+     * @param other Other maps
+     * @return Values occurring in both maps
+     */
+    Set<V> commonValues(MultiBiMap<K, V> other);
 }

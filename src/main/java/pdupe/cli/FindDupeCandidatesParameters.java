@@ -2,6 +2,11 @@ package pdupe.cli;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import com.google.common.base.Supplier;
+import java.util.Collection;
+import pdupe.util.JCommanderObjectDeserializerSupplier;
+import pdupe.util.JCommanderWriteLinesSink;
+import pdupe.util.Sink;
 
 /**
  * Find duplicate candidates in binary files.
@@ -11,26 +16,33 @@ import com.beust.jcommander.Parameters;
 @Parameters(commandDescription = "Add files/directories to the blob")
 public class FindDupeCandidatesParameters {
 
-    enum MatchMode {
-        SIZE, NAME, CHECKSUM
-    }
+    @Parameter(
+            names = "-q",
+            required = true,
+            converter = JCommanderObjectDeserializerSupplier.class,
+            description = "Query binary blob to read.")
+    Supplier<Object> q;
 
-    @Parameter(names = "-q", required = true, description = "Query binary blob to read.")
-    String q;
+    @Parameter(
+            names = "-t",
+            required = true,
+            converter = JCommanderObjectDeserializerSupplier.class,
+            description = "Target binary blob to read.")
+    Supplier<Object> t;
 
-    @Parameter(names = "-t", required = true, description = "Target binary blob to read.")
-    String t;
+    @Parameter(names = "-a", description = "Single attribute to compare. Use \"name\", \"size\", \"MD5\", \"SHA1\" or \"SHA512\"")
+    String a;
 
-    @Parameter(names = "-m", description = "Match mode (use SIZE, NAME or CHECKSUM).")
-    MatchMode mm = MatchMode.SIZE;
+    @Parameter(
+            names = "-oq",
+            converter = JCommanderWriteLinesSink.class,
+            description = "Text file to write selected query files.")
+    Sink<Collection<String>> oq;
 
-    @Parameter(names = "-s", description = "Checksum type for CHECKSUM match.")
-    String s = "SHA512";
-
-    @Parameter(names = "-oq", description = "Text file to write selected query files.")
-    String oq;
-
-    @Parameter(names = "-ot", description = "Text file to write selected target files.")
-    String ot;
+    @Parameter(
+            names = "-ot",
+            converter = JCommanderWriteLinesSink.class,
+            description = "Text file to write selected target files.")
+    Sink<Collection<String>> ot;
 
 }
